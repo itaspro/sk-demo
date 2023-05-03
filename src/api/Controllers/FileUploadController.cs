@@ -1,6 +1,7 @@
-using Azure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Text;
 using Newtonsoft.Json;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
@@ -11,15 +12,21 @@ namespace app.Controllers;
 [Route("api/[controller]")]
 public class FileUploadController : ControllerBase
 {
-    private readonly ILogger<FileUploadController> _logger;
-    private readonly IHubContext<ProgressHub> _hubContext;
-    private readonly IConfiguration _config;
+    private readonly ILogger<FileUploadController> logger;
+    private readonly IHubContext<ProgressHub> hubContext;
+    private readonly IConfiguration config;
+    private readonly IKernel kernel;
+    private readonly int DocumentLineSplitMaxTokens;
+    private readonly int DocumentParagraphSplitMaxLines;
 
-    public FileUploadController(ILogger<FileUploadController> logger, IHubContext<ProgressHub> hubContext, IConfiguration config)
+    public FileUploadController(ILogger<FileUploadController> logger, IHubContext<ProgressHub> hubContext, IConfiguration config, IKernel kernel)
     {
-        _logger = logger;
-        _hubContext = hubContext;
-        _config = config;
+        this.logger = logger;
+        this.hubContext = hubContext;
+        this.config = config;
+        this.kernel = kernel;
+        DocumentLineSplitMaxTokens = config.GetValue<int>("DocumentMemory:DocumentLineSplitMaxTokens" );
+        DocumentParagraphSplitMaxLines = config.GetValue<int>("DocumentMemory:DocumentParagraphSplitMaxLines");
     }
 
     [HttpPost]
@@ -29,12 +36,6 @@ public class FileUploadController : ControllerBase
         {
             return BadRequest("Invalid file format. Please upload a PDF file.");
         }
-
-        // Save the file to a temporary location
-    //    using (var stream = System.IO.File.Create(tempFilePath))
-    //     {
-    //         await file.CopyToAsync(stream);
-    //     }     string tempFilePath = Path.GetTempFileName();
     
         var stream = new MemoryStream();
         await file.CopyToAsync(stream);
@@ -42,13 +43,13 @@ public class FileUploadController : ControllerBase
         // Start the background job to extract content from the PDF
         _ = Task.Run(async () => await ExtractPdfContent(stream, file.FileName));
 
-         return Ok($"PDF file uploaded successfully. Content extraction is in progress.{file.FileName}");
+         return Ok($"PDF file uploaded successfully. Content processing is in progress.{file.FileName}");
     }
 
-    private async Task ExtractPdfContent(Stream stream, string fileName)
+    private async Task ExtractPdfContent(Stream stream, string fileName, string topic="global")
     {
         // Update progress
-        await _hubContext.Clients.All.SendAsync("ProgressUpdate", JsonConvert.SerializeObject(new { Progress = 0, FileName = fileName }));
+        await hubContext.Clients.All.SendAsync("ProgressUpdate", JsonConvert.SerializeObject(new { Progress = 0, FileName = fileName }));
 
         try
         {
@@ -59,19 +60,36 @@ public class FileUploadController : ControllerBase
                 // Either extract based on order in the underlying document with newlines and spaces.
                 var text = ContentOrderTextExtractor.GetText(page);
                 var progress = (page.Number * 100 / pdf.NumberOfPages);
-                await _hubContext.Clients.All.SendAsync("ProgressUpdate", JsonConvert.SerializeObject(new { Progress = progress, FileName = $"p:{page.Number}" }));
+                await hubContext.Clients.All.SendAsync("Parsing file", JsonConvert.SerializeObject(new { Progress = progress, FileName = $"p:{page.Number}" }));
                 result = $"{result}{text}";
-                _logger.LogInformation($"Indexed the PDF content successfully: {result}");
+                logger.LogInformation($"Indexed the PDF content successfully: {result}");
+            }
+            // Split the document into lines of text and then combine them into paragraphs.
+            var lines = TextChunker.SplitPlainTextLines(result, DocumentLineSplitMaxTokens);
+            var paragraphs = TextChunker.SplitPlainTextParagraphs(lines, DocumentParagraphSplitMaxLines);
+            await hubContext.Clients.All.SendAsync("Adding to memory ", JsonConvert.SerializeObject(new { Progress = 0, FileName = "" }));
+            int i = 0;
+            foreach (var paragraph in paragraphs)
+            {
+                i++;
+                await kernel.Memory.SaveInformationAsync(
+                    collection: topic,
+                    text: paragraph,
+                    id: Guid.NewGuid().ToString(),
+                    description: $"Document: {fileName}");
+
+                await hubContext.Clients.All.SendAsync("Adding to memory ", JsonConvert.SerializeObject(new { Progress = (i * 100 / (paragraphs.Count+1)), FileName = "" }));
             }
 
-            // Save the extracted text in a file with the same filename and the .ext extension
+            await hubContext.Clients.All.SendAsync("Complete", JsonConvert.SerializeObject(new { Progress = 100, FileName = "" }));
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error indexing the PDF content: {ex}");
+            logger.LogError($"Error indexing the PDF content: {ex}");
         }
 
+
         // Update progress
-        await _hubContext.Clients.All.SendAsync("ProgressUpdate", JsonConvert.SerializeObject(new { Progress = 100, FileName = fileName }));
+        await hubContext.Clients.All.SendAsync("ProgressUpdate", JsonConvert.SerializeObject(new { Progress = 100, FileName = fileName }));
     }
 }
