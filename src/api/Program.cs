@@ -1,4 +1,6 @@
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.KernelExtensions;
+using Microsoft.SemanticKernel.Orchestration;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables(prefix: "");
@@ -10,22 +12,25 @@ builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors();
-builder.Services.AddSingleton<IKernel>(new KernelBuilder()
-    .Configure(k => {
+var kernel = new KernelBuilder()
+    .Configure(k =>
+    {
         k.AddAzureTextEmbeddingGenerationService(
             "Embedding",
             config["AzureOpenAI:Embedding"],
             config["AzureOpenAI:EndPoint"],
             config["AzureOpenAI:ApiKey"]);
         k.AddAzureTextCompletionService(
-            "TextCompletion", 
-            config["AzureOpenAI:TextCompletion"], 
-            config["AzureOpenAI:EndPoint"], 
-            config["AzureOpenAI:ApiKey"]); 
-     })
+            "TextCompletion",
+            config["AzureOpenAI:TextCompletion"],
+            config["AzureOpenAI:EndPoint"],
+            config["AzureOpenAI:ApiKey"]);
+    })
     .WithMemoryStorage(new Microsoft.SemanticKernel.Memory.VolatileMemoryStore()) //in memory embedding store
-    .Build()
-);
+    .Build();
+kernel.ImportSemanticSkillFromDirectory("skills", "chat");
+builder.Services.AddSingleton<IKernel>(kernel);
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
