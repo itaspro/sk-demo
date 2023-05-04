@@ -62,7 +62,7 @@ public class FileUploadController : ControllerBase
                 var progress = (page.Number * 100 / pdf.NumberOfPages);
                 await hubContext.Clients.All.SendAsync("Parsing file", JsonConvert.SerializeObject(new { Progress = progress, FileName = $"p:{page.Number}" }));
                 result = $"{result}{text}";
-                logger.LogInformation($"Indexed the PDF content successfully: {result}");
+                logger.LogDebug($"Indexed the PDF content successfully: {result}");
             }
             // Split the document into lines of text and then combine them into paragraphs.
             var lines = TextChunker.SplitPlainTextLines(result, DocumentLineSplitMaxTokens);
@@ -80,7 +80,7 @@ public class FileUploadController : ControllerBase
 
                 await hubContext.Clients.All.SendAsync("Adding to memory ", JsonConvert.SerializeObject(new { Progress = (i * 100 / (paragraphs.Count+1)), FileName = "" }));
             }
-
+            logger.LogDebug($"Document content memorized successfully: {result}");
             await hubContext.Clients.All.SendAsync("Complete", JsonConvert.SerializeObject(new { Progress = 100, FileName = "" }));
         }
         catch (Exception ex)

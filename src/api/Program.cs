@@ -1,3 +1,6 @@
+using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -8,7 +11,7 @@ builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors();
-
+builder.Services.AddSingleton<IKernel>(KernelBuilder.Create());
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
