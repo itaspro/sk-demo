@@ -1,17 +1,31 @@
 using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.Services;
 
 var builder = WebApplication.CreateBuilder(args);
-
+builder.Configuration.AddEnvironmentVariables(prefix: "");
+var config = builder.Configuration;
 // Add services to the container.
-
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors();
-builder.Services.AddSingleton<IKernel>(KernelBuilder.Create());
+builder.Services.AddSingleton<IKernel>(new KernelBuilder()
+    .Configure(k => {
+        k.AddAzureTextEmbeddingGenerationService(
+            "Embedding",
+            config["AzureOpenAI:Embedding"],
+            config["AzureOpenAI:EndPoint"],
+            config["AzureOpenAI:ApiKey"]);
+        k.AddAzureTextCompletionService(
+            "TextCompletion", 
+            config["AzureOpenAI:TextCompletion"], 
+            config["AzureOpenAI:EndPoint"], 
+            config["AzureOpenAI:ApiKey"]); 
+     })
+    .WithMemoryStorage(new Microsoft.SemanticKernel.Memory.VolatileMemoryStore()) //in memory embedding store
+    .Build()
+);
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -26,6 +40,6 @@ app.UseCors();
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapHub<ProgressHub>("/progressHub");
+app.MapHub<MessageHub>("/hub");
 
 app.Run();
