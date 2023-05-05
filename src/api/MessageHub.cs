@@ -1,6 +1,7 @@
 using app.Controllers;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Orchestration;
 
 public class MessageHub : Hub
 {
@@ -14,9 +15,31 @@ public class MessageHub : Hub
         this.config = config;
         this.kernel = kernel;
     }
-
-    public void Ask(string message)
+    public override Task OnConnectedAsync()
     {
-        Clients.Client(Context.ConnectionId).SendAsync("Reply", message + " (echo from server)");
+        logger.LogInformation($"Connected. Connection ID: {Context.ConnectionId}");
+        return base.OnConnectedAsync();
+    }
+
+    public override Task OnDisconnectedAsync(Exception? exception)
+    {
+        logger.LogInformation($"Disconnected. Connection ID: {Context.ConnectionId}");
+       
+        return base.OnDisconnectedAsync(exception);
+    }
+    public async  Task Ask(string question)
+    {
+        var results = await kernel.Memory.SearchAsync(Context.ConnectionId, question, limit: 2).ToListAsync();
+        var variables = new ContextVariables(question)
+        {
+            ["context"] = results.Any()
+                ? string.Join("\n", results.Select(r => r.Metadata.Text))
+                : "No context found for this question.",
+            ["input"] = question,
+        };
+        
+        var skill = kernel.Skills.GetFunction("chat", "answer");
+        var result = await kernel.RunAsync(variables, skill);
+        await Clients.Client(Context.ConnectionId).SendAsync("Reply", result.Result);
     }
 }

@@ -1,6 +1,5 @@
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.KernelExtensions;
-using Microsoft.SemanticKernel.Orchestration;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables(prefix: "");
@@ -20,11 +19,12 @@ var kernel = new KernelBuilder()
             config["AzureOpenAI:Embedding"],
             config["AzureOpenAI:EndPoint"],
             config["AzureOpenAI:ApiKey"]);
-        k.AddAzureTextCompletionService(
+        //k.AddAzureTextCompletionService( //this won't work with gpt-35-tubro
+        k.AddAzureChatCompletionService(
             "TextCompletion",
             config["AzureOpenAI:TextCompletion"],
             config["AzureOpenAI:EndPoint"],
-            config["AzureOpenAI:ApiKey"]);
+            config["AzureOpenAI:ApiKey"]);  
     })
     .WithMemoryStorage(new Microsoft.SemanticKernel.Memory.VolatileMemoryStore()) //in memory embedding store
     .Build();
