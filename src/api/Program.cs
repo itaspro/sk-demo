@@ -41,7 +41,14 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors();
+app.UseCors(policy =>
+{
+    policy
+    .WithOrigins("http://localhost:8081", "http://localhost:8080")
+    .AllowAnyHeader()
+    .AllowAnyMethod()
+    .AllowCredentials();
+});
 app.UseAuthorization();
 
 app.MapControllers();

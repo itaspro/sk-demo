@@ -1,33 +1,70 @@
 <template>
   <div id="app">
+    
     <h1>PDF Uploader</h1>
     <input type="file" @change="onFileSelected" accept=".pdf" />
     <button @click="uploadPdf">Upload PDF</button>
-    <div v-if="progress > 0">
-      <h2>Progress: {{ progress }}%</h2>
-      <progress :value="progress" max="100"></progress>
+    <div v-if="progress">
+      <h2>Progress: {{ progress.Message }}%</h2>
+      <progress :value="progress.Progress" max="100"></progress>
+    </div>
+    <div>
+      connected: {{ connected }}
+      reconnecting: {{ reconnecting }}
+      <button :disabled="connected" @click="start">Reconnect</button>
     </div>
   </div>
 </template>
 
 <script>
 import axios from "axios";
-import { useSignalR } from '@dreamonkey/vue-signalr';
+import { HubConnectionBuilder, LogLevel, HubConnectionState } from '@microsoft/signalr'
+
+const initSignalR = (state) => {
+    const signalr = new HubConnectionBuilder()
+      .withUrl("https://localhost:7266/hub")
+      .configureLogging(LogLevel.Information)
+      .withAutomaticReconnect()
+      .build()
+
+    signalr.onclose(async (error) => {
+      console.assert(signalr.state === HubConnectionState.Disconnected);
+      state.reconnecting = true;
+      state.connected = false;
+      console.log("disconnected:" + error)
+      await state.start();
+    })
+
+    signalr.on('Connected', ({ clientID }) => {
+      state.clientID = clientID;
+    });
+    signalr.on('Progress', progress => {
+      state.progress= JSON.parse( progress)
+    }); 
+    signalr.on('Complete', () => {
+      state.progress= null
+    });
+    signalr.on('Error', error => {
+      state.error = JSON.parse(error)
+    });
+
+    return signalr;
+}
 
 export default {
   name: "App",
   data() {
     return {
       selectedFile: null,
-      progress: 0,
+      progress: null,
       clientID : null,
+      error: null,
+      connected: false,
+      reconnecting: false,
     };
   },
-  setup() {
-    const signalr = useSignalR();
-    signalr.on('Connected', ({ clientID }) => {
-      this.clientID = clientID;
-    });
+  created () {
+    this.signalr = initSignalR(this)
   },
   methods: {
     onFileSelected(event) {
@@ -52,13 +89,21 @@ export default {
     progressUpdate(data) {
       this.progress = data.Progress;
     },
+
+    async start() {
+        try {
+            await this.signalr.start();
+            console.log("SignalR Connected.");
+            this.connected = true;
+        } catch (err) {
+            console.log(err);
+            setTimeout(this.start, 5000);
+        }
+        this.reconnecting = false;
+    }
   },
   mounted() {
-    // this.$signalr.start({
-    //   url: "https://localhost:7266/Hub",
-    // });
-    // this.$signalr.on("Connected", (e) => console.log(e));
-    // this.$signalr.on("ProgressUpdate", this.progressUpdate);
+    this.start();
   }
 };
 </script>

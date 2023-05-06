@@ -15,10 +15,11 @@ public class MessageHub : Hub
         this.config = config;
         this.kernel = kernel;
     }
-    public override Task OnConnectedAsync()
+    public override async Task OnConnectedAsync()
     {
         logger.LogInformation($"Connected. Connection ID: {Context.ConnectionId}");
-        return base.OnConnectedAsync();
+        await base.OnConnectedAsync();
+        await Clients.Client(Context.ConnectionId).SendAsync("Connected", new { ClientID = Context.ConnectionId});
     }
 
     public override Task OnDisconnectedAsync(Exception? exception)

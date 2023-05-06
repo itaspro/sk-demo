@@ -72,6 +72,7 @@ public class FileUploadController : ControllerBase
             foreach (var paragraph in paragraphs)
             {
                 i++;
+                await Task.Delay(500);
                 var recordID = await kernel.Memory.SaveInformationAsync(
                     collection: clientID,
                     text: paragraph,
@@ -82,7 +83,7 @@ public class FileUploadController : ControllerBase
                 await hubContext.Clients.Client(clientID).SendAsync("Process", JsonConvert.SerializeObject(new { Progress = (i * 100 / (paragraphs.Count+1)), Message= "Process text with Semantic Kernel embedding & memory" }));
             }
             logger.LogDebug($"Document content memorized successfully: {result}");
-            await hubContext.Clients.Client(clientID).SendAsync("Process", JsonConvert.SerializeObject(new { Progress = 100, Message = "Complete" }));
+            await hubContext.Clients.Client(clientID).SendAsync("Complete", JsonConvert.SerializeObject(new { Progress = 100, Message = "PDF processed" }));
         }
         catch (Exception ex)
         {
