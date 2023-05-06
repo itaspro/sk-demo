@@ -2859,6 +2859,11 @@ electron-to-chromium@^1.4.284:
   resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.4.385.tgz#1afd8d6280d510145148777b899ff481c65531ff"
   integrity sha512-L9zlje9bIw0h+CwPQumiuVlfMcV4boxRjFIWDcLfFqTZNbkwOExBzfmswytHawObQX4OUhtNv8gIiB21kOurIg==
 
+emoji-picker-element@1.12.1:
+  version "1.12.1"
+  resolved "https://registry.yarnpkg.com/emoji-picker-element/-/emoji-picker-element-1.12.1.tgz#854a9bbae4d9a04fa2b5cd0763845921f4904c83"
+  integrity sha512-F9AY/re8uqZmBcCXLHLGvyy7fxuMQdZl9R8OToLRH8Vnns+WMX8RYUbI2nSJklzl5+82qzpYWeus1/puDepWcQ==
+
 emoji-regex@^8.0.0:
   version "8.0.0"
   resolved "https://registry.yarnpkg.com/emoji-regex/-/emoji-regex-8.0.0.tgz#e818fd69ce5ccfcb404594f842963bf53164cc37"
@@ -4009,6 +4014,11 @@ lines-and-columns@^1.1.6:
   version "1.2.4"
   resolved "https://registry.yarnpkg.com/lines-and-columns/-/lines-and-columns-1.2.4.tgz#eca284f75d2965079309dc0ad9255abb2ebc1632"
   integrity sha512-7ylylesZQ/PV29jhEDl3Ufjo6ZX7gCqJr5F7PKrqc93v7fzSymt1BpwEU8nAUXs8qzzvqhbjhK5QZg6Mt/HkBg==
+
+linkifyjs@2.1.9:
+  version "2.1.9"
+  resolved "https://registry.yarnpkg.com/linkifyjs/-/linkifyjs-2.1.9.tgz#af06e45a2866ff06c4766582590d098a4d584702"
+  integrity sha512-74ivurkK6WHvHFozVaGtQWV38FzBwSTGNmJolEgFp7QgR2bl6ArUWlvT4GcHKbPe1z3nWYi+VUdDZk16zDOVug==
 
 loader-runner@^4.1.0, loader-runner@^4.2.0:
   version "4.3.0"
@@ -5900,6 +5910,14 @@ vary@~1.1.2:
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/vary/-/vary-1.1.2.tgz#2299f02c6ded30d4a5961b0b9f74524a18f634fc"
   integrity sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==
+
+vue-advanced-chat@^2.0.7:
+  version "2.0.7"
+  resolved "https://registry.yarnpkg.com/vue-advanced-chat/-/vue-advanced-chat-2.0.7.tgz#bd35830c19fc5eb4e26545dc554d88e7808913cc"
+  integrity sha512-s+6v+KtVT46lFM8YohneLLS/vN10sSTAPfZiqAczXf13Q8vQWD9rSeWAokL0zuJeQ+jguNgFI6oN2wbI/RC1iw==
+  dependencies:
+    emoji-picker-element "1.12.1"
+    linkifyjs "2.1.9"
 
 vue-eslint-parser@^8.0.1:
   version "8.3.0"
