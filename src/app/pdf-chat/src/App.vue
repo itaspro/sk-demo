@@ -18,11 +18,14 @@
         height="calc(100vh - 20px)"
         :current-user-id="clientID"
         :rooms="JSON.stringify(rooms)"
-        :rooms-loaded="true"
         :messages="JSON.stringify(messages)"
         :messages-loaded="messagesLoaded"
         @send-message="sendMessage($event.detail[0])"
         @fetch-messages="fetchMessages($event.detail[0])"
+        :room-actions="JSON.stringify(roomActions)"
+        show-add-room="true"
+        show-files="true"
+        single-room = "true"
       />
   
 </template>
@@ -90,7 +93,12 @@ export default {
 			rooms: [
 			],
 			messages: [],
-			messagesLoaded: false
+			messagesLoaded: false,
+      roomActions: [
+          { name: 'inviteUser', title: 'Invite User' },
+          { name: 'removeUser', title: 'Remove User' },
+          { name: 'deleteRoom', title: 'Delete Room' }
+        ]
     };
   },
   created () {
@@ -107,10 +115,14 @@ export default {
       }
 
       const formData = new FormData();
-      formData.append("file", this.selectedFile);
+      formData.append("file", this.selectedFile.blob);
 
       try {
-        const response = await axios.post("https://localhost:7266/api/fileupload/"+this.clientID, formData);
+        const response = await axios.post("https://localhost:7266/api/fileupload/"+this.clientID, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+      });
         console.log(response.data);
       } catch (error) {
         console.error("Error uploading file:", error);
@@ -137,6 +149,10 @@ export default {
 
 
 		async sendMessage(message) {
+      if (message.files.length > 0) {
+        this.selectedFile = message.files[0];
+        await this.uploadPdf();
+      }
       await this.signalr.invoke("Echo",  "message");
 
 			this.messages = [
@@ -153,6 +169,26 @@ export default {
   },
   mounted() {
     this.start();
+    this.rooms = [...this.rooms,   
+    {
+      roomId: '1',
+      roomName: 'Room 1',
+      avatar: 'assets/imgs/people.png',
+      unreadCount: 4,
+      index: 3,
+      lastMessage: {
+        _id: 'xyz',
+        content: 'Last message received',
+        senderId: '1234',
+        username: 'John Doe',
+        timestamp: '10:20',
+        saved: true,
+        distributed: false,
+        seen: false,
+        new: true
+      }
+    }
+    ]
   }
 };
 </script>
