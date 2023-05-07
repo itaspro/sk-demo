@@ -44,7 +44,7 @@ public class FileUploadController : ControllerBase
             await file.CopyToAsync(stream);
             stream.Position = 0;
             // Start the background job to extract content from the PDF
-            await MemorizeContent(stream, file.FileName, clientID);
+            _ = Task.Run(async () => await MemorizeContent(stream, file.FileName, clientID));
 
         }
 
@@ -84,7 +84,7 @@ public class FileUploadController : ControllerBase
                     description: $"Document: {fileName}",
                     additionalMetadata: topic);
                 logger.LogDebug($"record: {recordID}");
-                await hubContext.Clients.Client(clientID).SendAsync("Process", JsonConvert.SerializeObject(new { Progress = (i * 100 / (paragraphs.Count+1)), Message= "Process text with Semantic Kernel embedding & memory" }));
+                await hubContext.Clients.Client(clientID).SendAsync("Progress", JsonConvert.SerializeObject(new { Progress = (i * 100 / (paragraphs.Count+1)), Message= "Process text with Semantic Kernel embedding & memory" }));
             }
             logger.LogDebug($"Document content memorized successfully: {result}");
             await hubContext.Clients.Client(clientID).SendAsync("Complete", JsonConvert.SerializeObject(new { Progress = 100, Message = "PDF processed" }));
@@ -93,6 +93,10 @@ public class FileUploadController : ControllerBase
         {
             logger.LogError($"Error indexing the PDF content: {ex}");
             await hubContext.Clients.Client(clientID).SendAsync("Error", JsonConvert.SerializeObject(new { Message=$"{ex.Message}" }));
+        }
+        finally
+        {
+            stream.Close();
         }
     }
 }

@@ -1,18 +1,5 @@
 <template>
   <div id="app">
-    
-    <!-- <h1>PDF Uploader</h1>
-    <input type="file" @change="onFileSelected" accept=".pdf" />
-    <button @click="uploadPdf">Upload PDF</button>
-    <div v-if="progress">
-      <h2>Progress: {{ progress.Message }}%</h2>
-      <progress :value="progress.Progress" max="100"></progress>
-    </div>
-    <div>
-      connected: {{ connected }}
-      reconnecting: {{ reconnecting }}
-      <button :disabled="connected" @click="start">Reconnect</button>
-    </div> -->
       <vue-advanced-chat
         height="calc(100vh - 20px)"
         :current-user-id="clientID"
@@ -51,7 +38,8 @@ const initSignalR = (state) => {
 
   signalr.on('Connected', ({ clientID }) => {
     state.clientID = clientID;
-    state.sendMessage("Please upload a PDF file");
+    // state.sendMessage("Please upload a PDF file", 0);
+ 
   });
 
   signalr.on('Progress', progress => {
@@ -100,31 +88,39 @@ export default {
     this.signalr = initSignalR(this)
   },
   methods: {
-    async uploadPdf(files) {
+    async uploadPdf(files, message) {
       if (files.length ==0) {
         alert("Please select a PDF file.");
-        return;
+        return false;
       }
 
       const formData = new FormData();
  
       for (let i in files) {
-        formData.append("file", new File([files[i].blob], files[i].name) );
+        let file = files[i];
+        if (file.extension != "pdf") {
+          alert("Please select a PDF file.");
+          return false;
+        }
+        formData.append("file", new File([file.blob], `${file.name}.${file.extension}` ));
       }
-      //formData.append("file", files[0].blob);
+      formData.append("message", message);
+
       try {
         const response = await axios.post("https://localhost:7266/api/fileupload/"+this.clientID, formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
           }
-      });
+        });
         console.log(response.data);
       } catch (error) {
         console.error("Error uploading file:", error);
+        return false;
       }
+      return true;
     },
     progressUpdate(data) {
-      this.progress = data.Progress
+      console.log(data);
     },
     async start() {
         try {
@@ -140,16 +136,28 @@ export default {
     fetchMessages() {
       this.messagesLoaded = true
 		},
-		async sendMessage(message) {
+		async sendMessage(message, senderId) {
       if (message.files && message.files.length > 0) {
-        await this.uploadPdf(message.files, message.content);
+        if (await this.uploadPdf(message.files, message.content)) {
+          this.messages = [
+            ...this.messages,
+            {
+              _id: this.messages.length+1,
+              content: "Files uploaded, you can ask questions now. Or you can upload more files if you want.",
+              senderId: 0,
+              timestamp: new Date().toString().substring(16, 21),
+              date: new Date().toDateString()
+            },
+          ]
+        }
       } else {
-        await this.signalr.invoke("Echo",  "message");
+        let response = await this.signalr.invoke("Ask", message.content); 
+        console.log(response);
         this.messages = [
           {
             _id: this.messages.length,
             content: message.content,
-            senderId: this.currentUserId,
+            senderId: senderId || this.currentUserId,
             timestamp: new Date().toString().substring(16, 21),
             date: new Date().toDateString()
           },
@@ -164,20 +172,30 @@ export default {
     {
       roomId: '1',
       roomName: 'PDF Chat',
-      avatar: 'assets/imgs/people.png',
+      avatar: 'https://www.techopedia.com/wp-content/uploads/2023/03/6e13a6b3-28b6-454a-bef3-92d3d5529007.jpeg',
       unreadCount: 1,
       index: 1,
       users:[
         {
-            _id: '1234',
-            username: 'John Doe',
-            avatar: 'assets/imgs/doe.png',
+            _id: '1',
+            username: 'Demo User',
+            avatar: 'https://media.licdn.com/dms/image/C5603AQFZ5CsDDBN8Qg/profile-displayphoto-shrink_100_100/0/1516584677087?e=1689206400&v=beta&t=VKwPOI-mdi7C6ESVuGdt6uBdSNlX5S3moO204j4x6G8',
             status: {
               state: 'online',
-              lastChanged: 'today, 14:30'
             }
         },
       ]}
+    ];
+
+    this.messages = [
+      {
+        _id: this.messages.length+1,
+        content: "Please upload PDFs files to start the conversation.",
+        senderId: 0,
+        timestamp: new Date().toString().substring(16, 21),
+        date: new Date().toDateString()
+      },
+      ...this.messages
     ]
   }
 };
