@@ -28,7 +28,7 @@ public class MessageHub : Hub
        
         return base.OnDisconnectedAsync(exception);
     }
-    public async  Task Ask(string question)
+    public async  Task Ask(string question, int seq)
     {
         var results = await kernel.Memory.SearchAsync(Context.ConnectionId, question, limit: 2).ToListAsync();
         var variables = new ContextVariables(question)
@@ -41,7 +41,7 @@ public class MessageHub : Hub
         
         var skill = kernel.Skills.GetFunction("chat", "answer");
         var result = await kernel.RunAsync(variables, skill);
-        await Clients.Client(Context.ConnectionId).SendAsync("Reply", result.Result);
+        await Clients.Client(Context.ConnectionId).SendAsync("Reply", result.Result, seq);
     }
 
     public async Task Echo(string message)

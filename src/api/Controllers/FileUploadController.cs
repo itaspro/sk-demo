@@ -52,8 +52,7 @@ public class FileUploadController : ControllerBase
     }
     private async Task MemorizeContent(Stream stream, string fileName, string clientID, string topic="global")
     {
-        // Update progress
-        await hubContext.Clients.Client(clientID).SendAsync("Progress", JsonConvert.SerializeObject(new { Progress = 0, Message = $"extracting content from {fileName }" }));
+        await hubContext.Clients.Client(clientID).SendAsync("Progress",$"extracting content from {fileName }" );
 
         try
         {
@@ -64,14 +63,12 @@ public class FileUploadController : ControllerBase
                 // Either extract based on order in the underlying document with newlines and spaces.
                 var text = ContentOrderTextExtractor.GetText(page);
                 var progress = (page.Number * 100 / pdf.NumberOfPages);
-                await hubContext.Clients.All.SendAsync("Progress", JsonConvert.SerializeObject(new { Progress = progress, Message = $"page:{page.Number}" }));
                 result = $"{result}{text}";
                 logger.LogDebug($"Indexed the PDF content successfully: {result}");
             }
             // Split the document into lines of text and then combine them into paragraphs.
             var lines = TextChunker.SplitPlainTextLines(result, DocumentLineSplitMaxTokens);
             var paragraphs = TextChunker.SplitPlainTextParagraphs(lines, DocumentParagraphSplitMaxLines);
-            await hubContext.Clients.Client(clientID).SendAsync("Progress", JsonConvert.SerializeObject(new { Progress = 0, Message = "Process text with Semantic Kernel embedding & memory" }));
             int i = 0;
             foreach (var paragraph in paragraphs)
             {
@@ -84,10 +81,10 @@ public class FileUploadController : ControllerBase
                     description: $"Document: {fileName}",
                     additionalMetadata: topic);
                 logger.LogDebug($"record: {recordID}");
-                await hubContext.Clients.Client(clientID).SendAsync("Progress", JsonConvert.SerializeObject(new { Progress = (i * 100 / (paragraphs.Count+1)), Message= "Process text with Semantic Kernel embedding & memory" }));
+                await hubContext.Clients.Client(clientID).SendAsync("Progress",$"Embedding: { (i * 100 / (paragraphs.Count+1))}%");
             }
             logger.LogDebug($"Document content memorized successfully: {result}");
-            await hubContext.Clients.Client(clientID).SendAsync("Complete", JsonConvert.SerializeObject(new { Progress = 100, Message = "PDF processed" }));
+            await hubContext.Clients.Client(clientID).SendAsync("Complete",  $"Files {fileName} has been processed, you can ask questions now. Or you can upload more files if you want." );
         }
         catch (Exception ex)
         {
