@@ -43,4 +43,9 @@ public class MessageHub : Hub
         var result = await kernel.RunAsync(variables, skill);
         await Clients.Client(Context.ConnectionId).SendAsync("Reply", result.Result);
     }
+
+    public async Task Echo(string message)
+    {
+        await Clients.Client(Context.ConnectionId).SendAsync("Reply", message);
+    }
 }

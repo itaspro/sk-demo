@@ -29,23 +29,37 @@ public class FileUploadController : ControllerBase
         DocumentParagraphSplitMaxLines = config.GetValue<int>("DocumentMemory:DocumentParagraphSplitMaxLines");
     }
 
-    [HttpPost("{clientID}")]
-    public async Task<IActionResult> Upload(IFormFile file, string clientID)
-    {
-        if (file == null || file.Length == 0 || Path.GetExtension(file.FileName).ToLowerInvariant() != ".pdf")
-        {
-            return BadRequest("Invalid file format. Please upload a PDF file.");
-        }
+    //[HttpPost("{clientID}")]
+    //public async Task<IActionResult> Upload(IFormFile file, string clientID)
+    //{
+    //    if (file == null || file.Length == 0 || Path.GetExtension(file.FileName).ToLowerInvariant() != ".pdf")
+    //    {
+    //        return BadRequest("Invalid file format. Please upload a PDF file.");
+    //    }
     
-        var stream = new MemoryStream();
-        await file.CopyToAsync(stream);
-        stream.Position =0;
-        // Start the background job to extract content from the PDF
-        _ = Task.Run(async () => await MemorizeContent(stream, file.FileName, clientID));
+    //    var stream = new MemoryStream();
+    //    await file.CopyToAsync(stream);
+    //    stream.Position =0;
+    //    // Start the background job to extract content from the PDF
+    //    _ = Task.Run(async () => await MemorizeContent(stream, file.FileName, clientID));
 
-         return Ok($"PDF file uploaded successfully. Content processing is in progress.{file.FileName}");
+    //     return Ok($"PDF file uploaded successfully. Content processing is in progress.{file.FileName}");
+    //}
+    //[Route("upload2")]
+    [HttpPost("{clientID}")]
+    public async Task<IActionResult> Upload2(string clientID)
+    {
+        var _files = Request.Form.Files;
+        foreach(var file in _files)
+        {
+            var stream = new MemoryStream();
+            await file.CopyToAsync(stream);
+            stream.Position = 0;
+            var pdf = PdfDocument.Open(stream);
+            logger.LogDebug(pdf.Information.ToString());
+        }
+        return Ok();
     }
-
     private async Task MemorizeContent(Stream stream, string fileName, string clientID, string topic="global")
     {
         // Update progress
