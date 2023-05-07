@@ -38,33 +38,45 @@ const initSignalR = (state) => {
 
   signalr.on('Connected', ({ clientID }) => {
     state.clientID = clientID;
-    // state.sendMessage("Please upload a PDF file", 0);
- 
   });
 
-  signalr.on('Progress', progress => {
-    state.progress= JSON.parse( progress)
+  signalr.on('Progress',  (Message)  => {
+    var progrss = {
+              _id: state.messages.length,
+              content: Message,
+              senderId: 0,
+              timestamp: new Date().toString().substring(16, 21),
+              date: new Date().toDateString()
+            }
+    state.messages[state.messages.length-1] = progrss;
   }); 
 
-  signalr.on('Complete', () => {
-    state.progress= null
+  signalr.on('Complete', (Message) => {
+    var progrss = {
+              _id: state.messages.length,
+              content: Message,
+              senderId: 0,
+              timestamp: new Date().toString().substring(16, 21),
+              date: new Date().toDateString()
+            }
+    state.messages[state.messages.length-1] = progrss;
+    state.messagesLoaded = true;
   });
 
   signalr.on('Error', error => {
     state.error = JSON.parse(error)
   });
 
-  signalr.on("Reply", answer => {
-    // console.log(state.clientID, state.messages);
-    state.messages.push(
+  signalr.on("Reply", (answer, seq) => {
+    state.messages= [...state.messages,
       {
-        _id: state.messages.length,
+        _id: seq,
         content: answer,
         senderId: state.clientID,
         timestamp: new Date().toString().substring(16, 21),
         date: new Date().toDateString()
       }
-    )
+    ]
   })
   return signalr;
 }
@@ -81,7 +93,7 @@ export default {
       reconnecting: false,
 			rooms: [],
 			messages: [],
-			messagesLoaded: false,
+			messagesLoaded: true,
     };
   },
   created () {
@@ -93,7 +105,7 @@ export default {
         alert("Please select a PDF file.");
         return false;
       }
-
+      this.messagesLoaded = false;
       const formData = new FormData();
  
       for (let i in files) {
@@ -119,9 +131,6 @@ export default {
       }
       return true;
     },
-    progressUpdate(data) {
-      console.log(data);
-    },
     async start() {
         try {
             await this.signalr.start();
@@ -136,32 +145,22 @@ export default {
     fetchMessages() {
       this.messagesLoaded = true
 		},
-		async sendMessage(message, senderId) {
+		async sendMessage(message) {
       if (message.files && message.files.length > 0) {
-        if (await this.uploadPdf(message.files, message.content)) {
-          this.messages = [
-            ...this.messages,
-            {
-              _id: this.messages.length+1,
-              content: "Files uploaded, you can ask questions now. Or you can upload more files if you want.",
-              senderId: 0,
-              timestamp: new Date().toString().substring(16, 21),
-              date: new Date().toDateString()
-            },
-          ]
-        }
+        await this.uploadPdf(message.files, message.content)
+        
       } else {
-        let response = await this.signalr.invoke("Ask", message.content); 
-        console.log(response);
+        let mId = this.messages.length;
+        await this.signalr.invoke("Ask",message.content, mId); 
         this.messages = [
+          ...this.messages,
           {
-            _id: this.messages.length,
+            _id: mId,
             content: message.content,
-            senderId: senderId || this.currentUserId,
+            senderId: 1,
             timestamp: new Date().toString().substring(16, 21),
             date: new Date().toDateString()
-          },
-          ...this.messages
+          }
         ]
       }
 		},
