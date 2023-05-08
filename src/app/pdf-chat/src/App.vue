@@ -37,7 +37,7 @@ export default {
     };
   },
   created () {
-    this.hub = initHub(this)
+    this.hub = initHub(process.env.VUE_APP_BASE_URL, this)
   },
   methods: {
     async start() {
@@ -68,7 +68,7 @@ export default {
       }
 
       try {
-        await axios.post("https://localhost:7266/api/fileupload/"+this.clientID, formData, {
+        await axios.post(`${process.env.VUE_APP_BASE_URL}/api/fileupload/${this.clientID}`, formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
           }

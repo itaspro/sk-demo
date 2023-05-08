@@ -1,7 +1,7 @@
 import { HubConnectionBuilder, LogLevel, HubConnectionState } from '@microsoft/signalr'
-const initHub = (state) => {
+const initHub = (base_url, state) => {
   const signalr = new HubConnectionBuilder()
-    .withUrl("https://localhost:7266/hub")
+    .withUrl(`${base_url}/hub`)
     .configureLogging(LogLevel.Information)
     .withAutomaticReconnect()
     .build()
