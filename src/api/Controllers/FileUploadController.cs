@@ -45,11 +45,11 @@ public class FileUploadController : ControllerBase
             stream.Position = 0;
             // Start the background job to extract content from the PDF
             _ = Task.Run(async () => await MemorizeContent(stream, file.FileName, clientID));
-
         }
 
         return Ok($"PDF file uploaded successfully.");
     }
+
     private async Task MemorizeContent(Stream stream, string fileName, string clientID, string topic="global")
     {
         await hubContext.Clients.Client(clientID).SendAsync("Progress",$"extracting content from {fileName }" );
@@ -57,34 +57,29 @@ public class FileUploadController : ControllerBase
         try
         {
             var pdf = PdfDocument.Open(stream);
-            var result = string.Empty;
-            foreach (var page in pdf.GetPages())
-            {
-                // Either extract based on order in the underlying document with newlines and spaces.
-                var text = ContentOrderTextExtractor.GetText(page);
-                var progress = (page.Number * 100 / pdf.NumberOfPages);
-                result = $"{result}{text}";
-                logger.LogDebug($"Indexed the PDF content successfully: {result}");
-            }
+            var result = ExtractText(pdf);
+
             // Split the document into lines of text and then combine them into paragraphs.
-            var lines = TextChunker.SplitPlainTextLines(result, DocumentLineSplitMaxTokens);
-            var paragraphs = TextChunker.SplitPlainTextParagraphs(lines, DocumentParagraphSplitMaxLines);
-            int i = 0;
+            var paragraphs = SplitText(result);
+
+            var i = 0;
+            var n = paragraphs.Count();
             foreach (var paragraph in paragraphs)
             {
                 i++;
                 await Task.Delay(500);
+
                 var recordID = await kernel.Memory.SaveInformationAsync(
                     collection: clientID,
                     text: paragraph,
                     id: Guid.NewGuid().ToString(),
                     description: $"Document: {fileName}",
                     additionalMetadata: topic);
-                logger.LogDebug($"record: {recordID}");
-                await hubContext.Clients.Client(clientID).SendAsync("Progress",$"Embedding: { (i * 100 / (paragraphs.Count+1))}%");
+
+                logger.LogDebug(recordID);
+                await hubContext.Clients.Client(clientID).SendAsync("Progress", $"Embedding file: { (i * 100 /  n)}%");
             }
-            logger.LogDebug($"Document content memorized successfully: {result}");
-            await hubContext.Clients.Client(clientID).SendAsync("Complete",  $"Files {fileName} has been processed, you can ask questions now. Or you can upload more files if you want." );
+            await hubContext.Clients.Client(clientID).SendAsync("Complete", $"Files {fileName} has been processed, you can ask questions now. Or you can upload more files if you want.");
         }
         catch (Exception ex)
         {
@@ -95,5 +90,27 @@ public class FileUploadController : ControllerBase
         {
             stream.Close();
         }
+    }
+
+    private IEnumerable<string> SplitText(string result)
+    {
+        var lines = TextChunker.SplitPlainTextLines(result, DocumentLineSplitMaxTokens);
+        var paragraphs = TextChunker.SplitPlainTextParagraphs(lines, DocumentParagraphSplitMaxLines);
+        return paragraphs;
+    }
+
+    private string ExtractText(PdfDocument pdf)
+    {
+        var result = string.Empty;
+        foreach (var page in pdf.GetPages())
+        {
+            // Either extract based on order in the underlying document with newlines and spaces.
+            var text = ContentOrderTextExtractor.GetText(page);
+            var progress = (page.Number * 100 / pdf.NumberOfPages);
+            result = $"{result}{text}";
+            logger.LogDebug($"Indexed the PDF content successfully: {result}");
+        }
+
+        return result;
     }
 }
