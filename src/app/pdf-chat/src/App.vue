@@ -33,6 +33,7 @@ export default {
 			rooms: [],
 			messages: [],
 			messagesLoaded: true,
+      errors:[]
     };
   },
   created () {

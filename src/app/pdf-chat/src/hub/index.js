@@ -42,7 +42,7 @@ const initHub = (state) => {
   });
 
   signalr.on('Error', error => {
-    state.error = JSON.parse(error)
+    state.errors = [JSON.parse(error)]
   });
 
   signalr.on("Reply", (answer, seq) => {
