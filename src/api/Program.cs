@@ -41,10 +41,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+var allowedCors = config["AllowedCors"].Split(';');
 app.UseCors(policy =>
 {
     policy
-    .WithOrigins("http://localhost:8081", "http://localhost:8080")
+    .WithOrigins(allowedCors)
     .AllowAnyHeader()
     .AllowAnyMethod()
     .AllowCredentials();
