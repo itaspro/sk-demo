@@ -7,6 +7,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="skills\chat\answer\skprompt.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="skills\chat\answer\skprompt.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.1.0" />
     <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.Storage" Version="5.1.2" />
     <PackageReference Include="Microsoft.SemanticKernel" Version="0.13.277.1-preview" />

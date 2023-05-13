@@ -35,3 +35,6 @@ msbuild.wrn
 
 # Visual Studio
 .vs/
+node_modules/
+Properties/
+launchSettings.json

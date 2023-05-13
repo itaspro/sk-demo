@@ -1,8 +1,11 @@
-import { HubConnectionBuilder, LogLevel, HubConnectionState } from '@microsoft/signalr'
+import { HubConnectionBuilder, LogLevel, HubConnectionState,HttpTransportType } from '@microsoft/signalr'
 const initHub = (base_url, state) => {
   const signalr = new HubConnectionBuilder()
-    .withUrl(`${base_url}/hub`)
-    .configureLogging(LogLevel.Information)
+    .withUrl(`${base_url}/hub`, {
+      skipNegotiation: true,
+      transport: HttpTransportType.WebSockets
+    })
+    .configureLogging(LogLevel.Debug)
     .withAutomaticReconnect()
     .build()
 

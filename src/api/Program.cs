@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Http.Connections;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.KernelExtensions;
 
@@ -6,8 +8,12 @@ builder.Configuration.AddEnvironmentVariables(prefix: "");
 var config = builder.Configuration;
 // Add services to the container.
 builder.Services.AddControllers();
-builder.Services.AddSignalR();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services
+    .AddSignalR( option =>
+    {
+        option.EnableDetailedErrors = true;
+        option.AddFilter<CustomFilter>();
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors();
@@ -25,6 +31,7 @@ var kernel = new KernelBuilder()
             config["AzureOpenAI:TextCompletion"],
             config["AzureOpenAI:EndPoint"],
             config["AzureOpenAI:ApiKey"]);  
+        
     })
     .WithMemoryStorage(new Microsoft.SemanticKernel.Memory.VolatileMemoryStore()) //in memory embedding store
     .Build();
@@ -34,11 +41,8 @@ builder.Services.AddSingleton<IKernel>(kernel);
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 var allowedCors = config["AllowedCors"].Split(';');
@@ -53,6 +57,11 @@ app.UseCors(policy =>
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapHub<MessageHub>("/hub");
+app.MapHub<MessageHub>("/hub", options =>
+{
+    options.Transports =
+         HttpTransportType.WebSockets |
+         HttpTransportType.ServerSentEvents;
+ });
 
 app.Run();

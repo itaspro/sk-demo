@@ -25,7 +25,7 @@ public class FileUploadController : ControllerBase
         this.hubContext = hubContext;
         this.config = config;
         this.kernel = kernel;
-        DocumentLineSplitMaxTokens = config.GetValue<int>("DocumentMemory:DocumentLineSplitMaxTokens" );
+        DocumentLineSplitMaxTokens = config.GetValue<int>("DocumentMemory:DocumentLineSplitMaxTokens");
         DocumentParagraphSplitMaxLines = config.GetValue<int>("DocumentMemory:DocumentParagraphSplitMaxLines");
     }
 
@@ -38,7 +38,7 @@ public class FileUploadController : ControllerBase
             return BadRequest("Invalid file format. Please upload a PDF file.");
         }
 
-        foreach(var file in files)
+        foreach (var file in files)
         {
             var stream = new MemoryStream();
             await file.CopyToAsync(stream);
@@ -50,9 +50,9 @@ public class FileUploadController : ControllerBase
         return Ok($"PDF file uploaded successfully.");
     }
 
-    private async Task MemorizeContent(Stream stream, string fileName, string clientID, string topic="global")
+    private async Task MemorizeContent(Stream stream, string fileName, string clientID, string topic = "global")
     {
-        await hubContext.Clients.Client(clientID).SendAsync("Progress",$"extracting content from {fileName }" );
+        await hubContext.Clients.Client(clientID).SendAsync("Progress", $"extracting content from {fileName }");
 
         try
         {
@@ -77,21 +77,20 @@ public class FileUploadController : ControllerBase
                     additionalMetadata: topic);
 
                 logger.LogDebug(recordID);
-                await hubContext.Clients.Client(clientID).SendAsync("Progress", $"Embedding file: { (i * 100 /  n)}%");
+                await hubContext.Clients.Client(clientID).SendAsync("Progress", $"Embedding file: { (i * 100 / n)}%");
             }
             await hubContext.Clients.Client(clientID).SendAsync("Complete", $"Files {fileName} has been processed, you can ask questions now. Or you can upload more files if you want.");
         }
         catch (Exception ex)
         {
             logger.LogError($"Error indexing the PDF content: {ex}");
-            await hubContext.Clients.Client(clientID).SendAsync("Error", JsonConvert.SerializeObject(new { Message=$"{ex.Message}" }));
+            await hubContext.Clients.Client(clientID).SendAsync("Error", JsonConvert.SerializeObject(new { Message = $"{ex.Message}" }));
         }
         finally
         {
             stream.Close();
         }
     }
-
     private IEnumerable<string> SplitText(string result)
     {
         var lines = TextChunker.SplitPlainTextLines(result, DocumentLineSplitMaxTokens);
